@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style type="text/css">
+		html,
+		body {
+			height: 100%;
+			margin: 0px;
+		}
+
+		textarea {
+			width: 99vw;
+			height: 45vh;
+		}
+
+		input {
+			width: 99.5vw;
+			height: 5vh;
+			min-height: 2em;
+		}
+	</style>
+	<script>
+		function parseHTML() {
+			document.getElementById("result").value="\t利用金額\t\t合計\t=SUM(E2:E26)*1.1\n\t謝礼金額\t\n\t入店時刻\t\n\t着席時刻\t\n\t退店時刻\t\n\t会計金額\t\n\tクーポン利用額\t\n\t座席位置\t\n\t混雑状況\t\n"
+			var parser = new DOMParser();
+			var doc = parser.parseFromString(document.getElementById("source").value, "text/html");
+			var q1h1h2 = doc.querySelectorAll(".q1tb1, .h1td2, .h2td1, .h1td3"); // 欲しい要素のクラス。q1が質問事項、h1/h2が小見出し
+			for (var i = 0; i < q1h1h2.length; i++) { // 取得したクラスを上から順に処理
+				if (q1h1h2[i].className.indexOf("q1tb1") != -1) { // 質問事項のクラスだった場合に行う処理
+					var q1td1 = q1h1h2[i].getElementsByClassName('q1td1'); // tdセルの内容を一括で取得
+					// 質問タイプ。質問テーブル内に該当する要素があるかどうかで判定
+					var hasIframe = q1h1h2[i].querySelector("iframe") != null; // お写真添付用のiframe
+					var hasTextArea = (q1h1h2[i].querySelector("textarea") != null && q1h1h2[i].querySelector("textarea").rows > 1); // textareaで書かせる長いテキスト
+					var hasTextBox = (q1h1h2[i].querySelector("input[type='text']") != null || (q1h1h2[i].querySelector("textarea") != null && q1h1h2[i].querySelector("textarea").rows == 1)); // input type=textか、row1のtextareaで書かせる短いテキスト
+					for (var j = 0; j < q1td1.length; j++) { // tdセルを上から順番に処理
+						if (RegExp(/^Q\d+\.$/).test(q1td1[j].textContent)) { // 質問番号（Q1.など）のセル
+							switch (true) {
+								case hasIframe: // お写真
+									document.getElementById("result").value += q1td1[j].textContent + "📷\t";
+									break;
+								case hasTextArea: // 長テキスト
+									document.getElementById("result").value += q1td1[j].textContent + "📝\t";
+									break;
+								case hasTextBox: // 短テキスト
+									document.getElementById("result").value += q1td1[j].textContent + "🖊️\t";
+									break;
+								default: // それ以外（ラジオボタンなど）
+									document.getElementById("result").value += q1td1[j].textContent + "️\t";
+									break;
+							}
+						} else if (q1td1[j].textContent.trim() == "") { // 空欄のセル。タブだけ入れる
+							document.getElementById("result").value += "️\t";
+						} else { // 質問内容の本体が入っているセル。まず末尾に空行があれば除去、途中の改行にはタブを挿入する
+							document.getElementById("result").value += q1td1[j].innerText.replace(/\n$/g, '').replace(/^\n/gm, '').replace(/\n/g, "\n\t") + "\n";
+						}
+					}
+				} else if (q1h1h2[i].className.indexOf("h1td3") != -1) { // 小見出し下の備考。小見出しの右に出したい
+					document.getElementById("result").value = document.getElementById("result").value.replace(/\n$/g, "\t\t") + q1h1h2[i].textContent + "\n";
+				} else { // 質問ではないセル＝小見出し。そのまま内容を入れて改行
+					document.getElementById("result").value += q1h1h2[i].textContent + "\n";
+				}
+			}
+		}
+	</script>
+</head>
+
+<body>
+	<textarea id="source">
+</textarea>
+	<br />
+	<input type="button" onclick="parseHTML();" value="spread">
+	<br />
+	<textarea id="result">
+	利用金額		合計	=SUM(E2:E26)*1.1
+	謝礼金額	
+	入店時刻	
+	着席時刻	
+	退店時刻	
+	会計金額	
+	クーポン利用額	
+	座席位置	
+	混雑状況	
+</textarea>
+</body>
+
+</html>
